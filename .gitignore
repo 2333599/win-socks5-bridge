@@ -3,6 +3,16 @@
 !.gitignore
 !README.md
 !go.mod
-!go.sum
 !*.go
 !*.sh
+
+# Generated outputs from build.sh / go build
+*.exe
+*.test
+*.out
+socks5-bridge-linux
+/build/
+/dist/
+
+# Generated dependency checksum cache (kept local per project policy)
+go.sum

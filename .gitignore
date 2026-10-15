@@ -1,8 +1,8 @@
-# Ignore everything unless it is source, build metadata, documentation, or a launcher script.
+# Ignore build artifacts and local files; keep source, scripts and docs only.
 *
 !.gitignore
 !README.md
 !go.mod
 !go.sum
 !*.go
-!*.bat
+!*.sh

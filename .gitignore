@@ -1,0 +1,8 @@
+# Ignore everything unless it is source, build metadata, documentation, or a launcher script.
+*
+!.gitignore
+!README.md
+!go.mod
+!go.sum
+!*.go
+!*.bat

@@ -24,4 +24,4 @@ esac
 if [ -x ./socks5-bridge-linux ]; then
 	exec ./socks5-bridge-linux -listen "${SOCKS5_LISTEN:-127.0.0.1:1080}" -upstream "$upstream"
 fi
-exec go run . -listen "${SOCKS5_LISTEN:-127.0.0.1:1080}" -upstream "$upstream"
+exec env GOFLAGS=-mod=mod go run . -listen "${SOCKS5_LISTEN:-127.0.0.1:1080}" -upstream "$upstream"

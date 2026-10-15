@@ -35,7 +35,7 @@ type upstream struct {
 }
 
 func main() {
-	// Launch the built-in browser UI when double-clicked or run without flags.
+	// Launch the native desktop UI when double-clicked or run without flags.
 	if len(os.Args) == 1 {
 		if err := runGUI(); err != nil {
 			log.Fatal(err)
@@ -45,7 +45,7 @@ func main() {
 	listen := flag.String("listen", "127.0.0.1:1080", "local SOCKS5 listen address (default: 127.0.0.1:1080)")
 	server := flag.String("upstream", "", "upstream SOCKS5 URL, e.g. socks5://user:pass@host:1080 (required)")
 	clearProxy := flag.Bool("clear-proxy", false, "disable the current user's Windows manual system proxy and exit")
-	gui := flag.Bool("gui", false, "open the built-in browser interface")
+	gui := flag.Bool("gui", false, "open the native desktop interface")
 	flag.Parse()
 	if *gui {
 		if err := runGUI(); err != nil {

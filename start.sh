@@ -14,4 +14,4 @@ esac
 if [ -x ./socks5-bridge-linux ]; then
 	exec ./socks5-bridge-linux "$@"
 fi
-exec go run . "$@"
+exec env GOFLAGS=-mod=mod go run . "$@"

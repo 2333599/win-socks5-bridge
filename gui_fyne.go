@@ -19,6 +19,8 @@ func runGUI() error {
 
 	upstream := widget.NewEntry()
 	upstream.SetPlaceHolder("socks5h://user:password@proxy.example.com:1080")
+	mode := widget.NewSelect([]string{modeApplication, modeSystem, modeTUN}, nil)
+	mode.SetSelected(modeApplication)
 	listen := widget.NewEntry()
 	listen.SetText("127.0.0.1:1080")
 	status := widget.NewLabel("状态：未启动")
@@ -26,34 +28,66 @@ func runGUI() error {
 	logView.SetPlaceHolder("运行状态和错误会显示在这里")
 	logView.Disable()
 
-	manager := newProxyManager()
+	manager := &modeManager{}
 	start := widget.NewButton("启动代理", nil)
 	stop := widget.NewButton("停止代理", nil)
 	stop.Disable()
 	clear := widget.NewButton("清除 Windows 手动代理", nil)
 	if runtime.GOOS != "windows" {
+		clear.SetText("Windows 清除手动代理")
 		clear.Disable()
 	}
+	mode.OnChanged = func(value string) {
+		switch value {
+		case modeSystem:
+			if listen.Text == "127.0.0.1:1080" || listen.Text == "" {
+				listen.SetText("127.0.0.1:8080")
+			}
+			listen.Enable()
+		case modeApplication:
+			if listen.Text == "127.0.0.1:8080" || listen.Text == "" {
+				listen.SetText("127.0.0.1:1080")
+			}
+			listen.Enable()
+		case modeTUN:
+			listen.Disable()
+		}
+	}
 
-	start.OnTapped = func() {
+	launch := func() {
 		address := strings.TrimSpace(listen.Text)
 		if address == "" {
 			address = "127.0.0.1:1080"
 			listen.SetText(address)
 		}
-		if err := manager.Start(address, strings.TrimSpace(upstream.Text)); err != nil {
+		if err := manager.Start(mode.Selected, address, strings.TrimSpace(upstream.Text)); err != nil {
 			dialog.ShowError(err, w)
 			appendLog(logView, "启动失败："+err.Error())
 			return
 		}
-		status.SetText("状态：运行中（" + manager.Address() + "）")
-		appendLog(logView, "代理已启动，监听 "+manager.Address())
+		activeMode, address := manager.Status()
+		status.SetText("状态：" + activeMode + "运行中（" + address + "）")
+		appendLog(logView, activeMode+"已启动（"+address+"）")
 		start.Disable()
 		stop.Enable()
 	}
+	start.OnTapped = func() {
+		if mode.Selected == modeTUN {
+			dialog.ShowConfirm("启动 TUN 全流量代理", "此模式会接管 IPv4/IPv6 默认路由，需要 Windows 管理员权限或 Linux root。请确认上游 SOCKS5 支持 UDP；停止时程序会恢复路由。继续？", func(ok bool) {
+				if ok {
+					launch()
+				}
+			}, w)
+			return
+		}
+		launch()
+	}
 
 	stop.OnTapped = func() {
-		manager.Stop()
+		if err := manager.Stop(); err != nil {
+			dialog.ShowError(err, w)
+			appendLog(logView, "停止时恢复系统网络设置失败："+err.Error())
+		}
 		status.SetText("状态：已停止")
 		appendLog(logView, "代理已停止")
 		start.Enable()
@@ -76,6 +110,8 @@ func runGUI() error {
 
 	w.SetContent(container.NewVBox(
 		widget.NewLabelWithStyle("本机 SOCKS5 代理", fyne.TextAlignLeading, fyne.TextStyle{Bold: true}),
+		widget.NewLabel("代理模式"),
+		mode,
 		widget.NewLabel("上游 SOCKS5 地址（支持 socks5:// 和 socks5h://，可选用户名/密码）"),
 		upstream,
 		widget.NewLabel("本地监听地址"),
@@ -84,9 +120,9 @@ func runGUI() error {
 		status,
 		widget.NewLabel("日志"),
 		container.NewScroll(logView),
-		widget.NewLabel("启动后，在目标应用中设置 SOCKS5 代理为 127.0.0.1:1080。程序不会自动修改应用或系统代理。"),
+		widget.NewLabel("单应用模式：目标应用设置 SOCKS5 127.0.0.1:1080；系统代理模式：自动设置 Windows/GNOME 系统 HTTP(S) 代理；TUN 模式：需要管理员权限并接管系统路由。"),
 	))
-	w.SetOnClosed(func() { manager.Stop() })
+	w.SetOnClosed(func() { _ = manager.Stop() })
 	w.ShowAndRun()
 	return nil
 }

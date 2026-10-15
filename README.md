@@ -1,42 +1,38 @@
 # Cross-platform SOCKS5 Bridge
 
-跨平台 SOCKS5 工具：在本机开启 SOCKS5 入口，并通过另一个 SOCKS5 服务器转发 TCP 流量。桌面 GUI 使用 Go/Fyne 编写，是独立原生窗口；不使用浏览器或 PowerShell。项目使用 Go 源码和 POSIX `sh` 脚本，不包含 `.bat` 启动器。
+跨平台 SOCKS5 工具：桌面 GUI 使用 Go/Fyne 实现，是独立原生窗口；不使用浏览器或 PowerShell。项目使用 Go 源码和 POSIX `sh` 脚本，不包含 `.bat` 启动器。
 
-## 使用
+## 代理模式
+
+- **单应用 SOCKS5**：只代理配置了 SOCKS5 的应用。默认监听 `127.0.0.1:1080`。
+- **系统代理**：启动本地 HTTP/CONNECT→SOCKS5 桥接，并设置 Windows 或 GNOME 系统代理；停止时恢复之前的设置。只影响遵循系统代理的应用。
+- **TUN 全流量代理**：接管 IPv4/IPv6 默认路由，通过上游 SOCKS5 转发 TCP/UDP。Windows 需管理员权限，Linux 需 root；上游必须支持 SOCKS5 UDP ASSOCIATE。
+
+在 GUI 中选择模式，填入上游地址（例如 `socks5h://user:password@proxy.example.com:1080`），点击“启动代理”。单应用模式下，目标应用使用 `127.0.0.1:1080`。停止代理或正常关闭 GUI 会尝试恢复系统代理/路由。
+
+系统代理模式支持 Windows 和 GNOME Linux；其他 Linux 桌面环境可用 TUN 模式。GUI 的清除按钮只清除 Windows 当前用户的手动系统代理。
+
+上游 URL 支持 `socks5://[用户名:密码@]主机:端口` 和 `socks5h://...`。带特殊字符的凭据需进行 URL 编码。单应用代理支持 TCP `CONNECT`；TUN 模式的 UDP 能力取决于上游 SOCKS5 服务器。
+
+## 启动
 
 - Windows：双击构建出的 `win-socks5-bridge-native.exe`，或在 Git Bash 中运行 `./start.sh`。
-- Linux：运行 `./start.sh`；需要源码运行时会调用 `go run .`。
-- GUI 中填入上游地址，如 `socks5h://user:password@proxy.example.com:1080`，设置本地监听地址并点击“启动代理”。
-- 在目标应用中配置 SOCKS5 `127.0.0.1:1080`。GUI 不会自动修改浏览器或系统代理。
-- 点击“停止代理”或关闭 GUI 可停止代理。
-
-GUI 中清除系统代理按钮仅在 Windows 可用：会清除当前用户的手动代理设置，不修改自动检测或 PAC 脚本。也可在 Windows Git Bash 中运行 `./clear-proxy.sh`。Linux 目前不修改桌面环境代理设置。
-
-上游 URL 支持 `socks5://[用户名:密码@]主机:端口` 和 `socks5h://...`。带特殊字符的凭据需进行 URL 编码。代理支持 SOCKS5 `CONNECT`（TCP），不支持 UDP ASSOCIATE 或透明代理。
-
-## 命令行
-
-运行 `./start-cli.sh` 并输入上游地址，或通过环境变量提供地址：
+- Linux：运行 `./start.sh`；无已构建二进制时会调用 `go run .`。
+- 命令行：运行 `./start-cli.sh` 并输入上游地址，或设置 `SOCKS5_UPSTREAM`。
 
 ```sh
 SOCKS5_UPSTREAM='socks5://user:pass@proxy.example.com:1080' ./start-cli.sh
 ```
 
-也可以直接使用 Go 程序参数：
-
-```sh
-go run . -listen 127.0.0.1:1080 -upstream 'socks5://user:pass@proxy.example.com:1080'
-```
-
 ## 构建
 
-需要 Go 1.20+。首次构建会下载 Fyne Go 模块。Fyne 使用 CGO：Windows 构建需要 GCC/MinGW-w64 工具链，Linux 需要 GCC、pkg-config 及 X11/OpenGL 开发库（Debian/Ubuntu：`gcc pkg-config libgl1-mesa-dev xorg-dev`）。
-
-使用统一的 POSIX shell 构建脚本：
+需要 Go 1.23.1+。首次构建会下载 Fyne 与 tun2socks 模块。Fyne 使用 CGO：Windows 构建需要 GCC/MinGW-w64 工具链；Linux 需要 GCC、pkg-config 及 X11/OpenGL 开发库（Debian/Ubuntu：`gcc pkg-config libgl1-mesa-dev xorg-dev`）。
 
 ```sh
 ./build.sh windows amd64
 ./build.sh linux amd64
 ```
 
-Windows 运行 `build.sh` 时可使用 Git Bash；交叉构建需配置对应平台的 C 编译器。
+Windows 运行脚本时可使用 Git Bash。Linux 交叉构建 Windows 需安装 MinGW-w64，可通过 `MINGW_GCC=x86_64-w64-mingw32-gcc ./build.sh windows amd64` 指定编译器。
+
+TUN 会修改系统路由；如果启动失败，GUI 会显示错误。请先确认具有所需权限，并确保上游 SOCKS5 支持 UDP ASSOCIATE。

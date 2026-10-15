@@ -5,6 +5,8 @@
 !go.mod
 !*.go
 !*.sh
+!cmd/
+!cmd/gcc-wrapper/
 
 # Generated outputs from build.sh / go build
 *.exe

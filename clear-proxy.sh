@@ -11,4 +11,4 @@ case "$(uname -s)" in
     fi
     ;;
 esac
-exec go run . -clear-proxy
+exec env GOFLAGS=-mod=mod go run . -clear-proxy
